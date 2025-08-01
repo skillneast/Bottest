@@ -1,9 +1,6 @@
-import os
-import uuid
 import time
-import json
+import uuid
 import logging
-import base64 # <-- Base64 decoding ke liye import
 import firebase_admin
 from firebase_admin import credentials, db
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -13,13 +10,14 @@ from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes,
 )
+# Render Web Service ke liye zaroori libraries
 import threading
 from flask import Flask
 
 # =========================================================================
-# === CONFIG (SECRETS ARE NOW PARTIALLY SECURED) ===
+# === CONFIG (SECRETS ARE HARDCODED - 🚨 EXTREMELY UNSAFE! 🚨) ===
 # =========================================================================
-# Aapka naya bot token
+# Aapka NAYA Bot Token
 BOT_TOKEN = "8326586625:AAGgz-XVjX4fRfpSR5iNrDhcZh8POvAQIm8"
 
 # Public config
@@ -31,13 +29,13 @@ OWNER_LINK = "https://t.me/neasthub"
 SITE_LINK = "https://skillneastauth.vercel.app/"
 
 # --- Firebase Configuration ---
-# Private key ko chhod kar baaki sab hardcoded hai.
 FIREBASE_DATABASE_URL = "https://adminneast-default-rtdb.firebaseio.com"
+
+# Credentials ka template (bina private key ke)
 FIREBASE_CREDENTIALS_TEMPLATE = {
   "type": "service_account",
   "project_id": "adminneast",
   "private_key_id": "5abfa705c2d4f161b0d72b0be87f708ca8bb0f80",
-  # Private key yahan se hata di gayi hai. Yeh ab environment se aayegi.
   "client_email": "firebase-adminsdk-fbsvc@adminneast.iam.gserviceaccount.com",
   "client_id": "102397019138291957016",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -47,40 +45,59 @@ FIREBASE_CREDENTIALS_TEMPLATE = {
   "universe_domain": "googleapis.com"
 }
 
+# ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+# YAHAN APNI PRIVATE KEY DAALEIN (BILKUL JAISA COPY KIYA HAI, WAISA HI)
+# ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+PRIVATE_KEY_RAW = r"""-----BEGIN PRIVATE KEY-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC7h7lpfJIy0Svk
+Fo0/XJhakX8P/Phck+OZeBlXDsAHAAlDIWz47G9c2bdzV2ZrheQFw+mI/tiRW4E0
+vuIISN+fNmWxh2SLX9dusX1c7oYT8rHip4HgSq04/VoHK6TcLHkqXVHVTfCoGE2k
+dsTI4LTihFeq9JDKij2xlcUA0zEQzCPiEwE7mAQ5edF9YXxexZgezXMPuox5CUvA
+Xk9TKDn916mks/IQuNoPrJcjPNNRnie5Ql9RpWnMnHXaIjsCMk+dslsS3NQaPzRZ
+YR0WzEgskexW3zRbWDz/XiaCDM7jLnp9sIIE7GAwcEzAHePjl3yaNkSMPLjn85Gr
+CNaTi/pjAgMBAAECggEAHhru2BFogwHzct1v9YEO8FM1O8LXuD0Bp8yQ/NngV/9Y
+fU9raBbE1foZqkmYpqBK9+X4osaOy98NwgL21G+mfq/D6Zkbugg71Ihn4LhmC+PF
+TOapQfGbF3AMuOP3xmTZWsS6c2zcuo+UP1fVxY3VXBv02vwCFpHUz6KEitpcoR5t
+wnZP4+qiZszDCiQFwItQ6jchRA6FZiUOMN6Z7I3fVZcdjnDd18ZON2Hw91XaFnyL
+M4MNDCT3kXu6c8a3/4gJRPnZpKrb0RTgUwtfs+OAn5TjZtpBlMV5VZVMHX7ZZg6d
+08n2r8ORA4RJWamZUamT2vz2z/x7kltaVyQTJjLhuQKBgQD1dcNzbJurq54bEcdn
+3sDldy50ZJHpXcUOBgLExaeMO6+x69TTO5xrgtuXt0zXH49KeeFdyMRzMGR8GXXQ
+xMc4/ANLlAMlQpGb9l1glAEM+jt1SiVLuYhw0NSGfQxEg9My56NiHV6gVekCUoU0
+GRs3ZTI4nLRr5ypmkWvvbrAu9QKBgQDDlSm1ansJUVDHdI39UmsBBCGfhlljULzl
+kuuFOF5yKErIme9X2gwB/KsH6Ch/rdIv5ysScNzJACTmkQbW2mjOVw3FZB8K5Jsk
+OfL0B+LxWJmZJULwB0aogl8NCIG/Xthf7tIPAAzXpglTYjXM+7yLLEjvqarQklfo
+r2qsi5B89wKBgC564EnpFQlK9CN4GGRo3+oTyW4s5RxlrzzakoekTffWDY0JdUGS
+liodm2t9QEW0KjQWJEDYFasiTMTbJV4lBPybbBxRqM7TbjM0UbZKEHDeqYeqRKm0
+Nkv2n2fgIgSPWdzX1C5uFU8TNY5FBgg5gNfah8oEkn2kRnkprGCoeyBJAoGAM2wx
+hihT5xRBJ9/mQTd9OMwsRvQc5nbg439oeyNh+aPMXcfTXQbQZ2lWUoLguwkpnTyr
+X3LbKeHm0dRJtw2/xpiu3zo+yy9l9vVhgnXcXlZMNC7O1askEcQNV7Dn5Df8reRt
+yFHcDoryIsFMofOCFBl1p8W1Spdfk6cjZfBf8esCgYBTL9DE0DbEk0XwL5ycbfxv
+/n0i0NJiC9ZUb+N+pmVTE1Doope/UQqVccEUdqWKlf4yY7DgLgpDE0JLPgUWpm2g
+QNNV1FS3vDNoPNBlcOETkrs/+Y7lJ8yiT4TYd1siqfz5+k0v82k0J/7jPleupDx6
+8ujxOm9a7rEXQSTA3u8Yeg==
+-----END PRIVATE KEY-----"""
+# ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
 # === LOGGING SETUP ===
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-# === FIREBASE INITIALIZATION (Updated to use Base64 key) ===
+# === FIREBASE INITIALIZATION (Updated to use Raw String) ===
 def initialize_firebase():
     try:
-        logging.info("Initializing Firebase...")
-        # 1. Base64-encoded key ko environment se get karte hain
-        encoded_key = os.getenv("FIREBASE_PRIVATE_KEY_BASE64")
-        if not encoded_key:
-            logging.error("CRITICAL: FIREBASE_PRIVATE_KEY_BASE64 environment variable not found!")
-            return False
-        
-        # 2. Key ko decode karke wapas original format me laate hain
-        decoded_key = base64.b64decode(encoded_key).decode('utf-8')
-
-        # 3. Decoded key ko credentials template me daalte hain
+        logging.info("Initializing Firebase using Raw String method...")
         creds_dict = FIREBASE_CREDENTIALS_TEMPLATE.copy()
-        creds_dict['private_key'] = decoded_key
-
-        # 4. Final credentials se Firebase initialize karte hain
+        creds_dict['private_key'] = PRIVATE_KEY_RAW
+        
         cred = credentials.Certificate(creds_dict)
         firebase_admin.initialize_app(cred, {'databaseURL': FIREBASE_DATABASE_URL})
-        
-        logging.info("Firebase has been initialized successfully using Base64 key!")
+        logging.info("Firebase has been initialized successfully!")
         return True
     except Exception as e:
         logging.error(f"Failed to initialize Firebase: {e}")
         return False
-
-# === BAAKI KA SAARA CODE BILKUL SAME HAI ===
 
 # === TOKEN GENERATOR (Interacts with Firebase) ===
 async def generate_and_save_token(user_id: int) -> str | None:
