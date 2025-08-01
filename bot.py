@@ -10,11 +10,13 @@ from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes,
 )
+# === LIBRARIES FOR WEB SERVER WORKAROUND ===
+import threading
+from flask import Flask
 
 # =========================================================================
 # === CONFIG (SECRETS ARE HARDCODED - 🚨 EXTREMELY UNSAFE! 🚨) ===
 # =========================================================================
-# DANGER: Yeh secrets public ho sakte hain agar code GitHub par hai.
 BOT_TOKEN = "8326586625:AAGA9NX8XB7ZnXqvM2-ANOO9TYfLsZeAgvQ" # <-- Aapka Bot Token
 
 # Public config
@@ -25,13 +27,10 @@ CHANNELS = [
 OWNER_LINK = "https://t.me/neasthub"
 SITE_LINK = "https://skillneastauth.vercel.app/"
 
-# --- Firebase Configuration (HARDCODED with your provided credentials) ---
+# --- Firebase Configuration ---
 FIREBASE_DATABASE_URL = "https://adminneast-default-rtdb.firebaseio.com"
-
-# ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-# Your Firebase Service Account Credentials - ALL SET!
-# ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
 FIREBASE_CREDENTIALS_DICT = {
+  # ... Aapke saare Firebase credentials yahan ...
   "type": "service_account",
   "project_id": "adminneast",
   "private_key_id": "5abfa705c2d4f161b0d72b0be87f708ca8bb0f80",
@@ -44,9 +43,12 @@ FIREBASE_CREDENTIALS_DICT = {
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40adminneast.iam.gserviceaccount.com",
   "universe_domain": "googleapis.com"
 }
-# ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
+# ==============================================================
+# === BAAKI KA SAARA BOT KA CODE (is-me koi badlaav nahi) ===
+# ==============================================================
 
+# ... (Firebase Initialization, Token Generator, Start Handler, etc. saara code yahan aayega) ...
 # === LOGGING SETUP ===
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -55,6 +57,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # === FIREBASE INITIALIZATION ===
 def initialize_firebase():
+    # ... (function code same as before)
     try:
         cred = credentials.Certificate(FIREBASE_CREDENTIALS_DICT)
         firebase_admin.initialize_app(cred, {'databaseURL': FIREBASE_DATABASE_URL})
@@ -64,19 +67,14 @@ def initialize_firebase():
         logging.error(f"Failed to initialize Firebase: {e}")
         return False
 
-# === TOKEN GENERATOR (Interacts with Firebase) ===
+# === TOKEN GENERATOR ===
 async def generate_and_save_token(user_id: int) -> str | None:
+    # ... (function code same as before)
     try:
         token = str(uuid.uuid4())
         current_timestamp = int(time.time())
-        expiry_timestamp = current_timestamp + (15 * 60) # 15 minutes expiry
-
-        token_data = {
-            'user_id': user_id,
-            'created_at': current_timestamp,
-            'expiry_timestamp': expiry_timestamp,
-            'used': False
-        }
+        expiry_timestamp = current_timestamp + (15 * 60)
+        token_data = {'user_id': user_id, 'created_at': current_timestamp, 'expiry_timestamp': expiry_timestamp, 'used': False}
         ref = db.reference(f'tokens/{token}')
         ref.set(token_data)
         logging.info(f"Token {token} for user {user_id} saved to Firebase.")
@@ -85,12 +83,12 @@ async def generate_and_save_token(user_id: int) -> str | None:
         logging.error(f"Failed to generate/save token: {e}")
         return None
 
-# === START HANDLER (Updated description) ===
+# === START HANDLER ===
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # ... (function code same as before)
     user_id = update.effective_user.id
     logging.info(f"User {user_id} started the bot.")
     joined_all, _ = await check_all_channels(context, user_id)
-
     if joined_all:
         await send_token(update, context)
     else:
@@ -104,14 +102,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "👉 𝗣𝗹𝗲𝗮𝘀𝗲 𝗷𝗼𝗶𝗻 𝘁𝗵𝗲 𝗯𝗲𝗹𝗼𝘄 𝗰𝗵𝗮𝗻𝗻𝗲𝗹𝘀 𝘁𝗼 𝘂𝗻𝗹𝗼𝗰𝗸 𝘆𝗼𝘂𝗿 𝗱𝗮𝗶𝗹𝘆 𝗮𝗰𝗰𝗲𝘀𝘀 𝘁𝗼𝗸𝗲𝗻 👇"
         )
         keyboard = [[InlineKeyboardButton(f"📥 Join {name[1:]}", url=url)] for name, url in CHANNELS]
-        keyboard.append([
-            InlineKeyboardButton("✅ I Joined", callback_data="check"),
-            InlineKeyboardButton("👑 Owner", url=OWNER_LINK)
-        ])
+        keyboard.append([InlineKeyboardButton("✅ I Joined", callback_data="check"), InlineKeyboardButton("👑 Owner", url=OWNER_LINK)])
         await update.message.reply_text(welcome_text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard))
 
 # === VERIFY BUTTON HANDLER ===
 async def check_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # ... (function code same as before)
     query = update.callback_query
     user_id = query.from_user.id
     await query.answer()
@@ -121,19 +117,14 @@ async def check_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_token(query, context, edit=True)
     else:
         not_joined_list = "\n".join([f"🔸 {ch[1:]}" for ch, _ in not_joined])
-        keyboard = [
-            [InlineKeyboardButton("🔁 Retry", callback_data="check")],
-            [InlineKeyboardButton("👑 Owner Profile", url=OWNER_LINK)]
-        ]
-        await query.edit_message_text(
-            f"❌ You still haven’t joined:\n\n<code>{not_joined_list}</code>\n\n"
-            "📛 Access will be revoked if you leave any channel.",
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+        keyboard = [[InlineKeyboardButton("🔁 Retry", callback_data="check")], [InlineKeyboardButton("👑 Owner Profile", url=OWNER_LINK)]]
+        await query.edit_message_text(f"❌ You still haven’t joined:\n\n<code>{not_joined_list}</code>\n\n"
+                                    "📛 Access will be revoked if you leave any channel.",
+                                    parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard))
 
-# === CHECK MEMBERSHIP (No changes) ===
+# === CHECK MEMBERSHIP ===
 async def check_all_channels(context, user_id):
+    # ... (function code same as before)
     not_joined = []
     for username, url in CHANNELS:
         try:
@@ -145,8 +136,9 @@ async def check_all_channels(context, user_id):
             not_joined.append((username, url))
     return len(not_joined) == 0, not_joined
 
-# === SEND TOKEN (Updated for Firebase) ===
+# === SEND TOKEN ===
 async def send_token(obj, context, edit=False):
+    # ... (function code same as before)
     user_id = obj.effective_user.id
     token = await generate_and_save_token(user_id)
     if not token:
@@ -156,7 +148,6 @@ async def send_token(obj, context, edit=False):
         else:
             await obj.message.reply_text(error_text)
         return
-
     keyboard = [[InlineKeyboardButton("🔐 Access Website", url=SITE_LINK)], [InlineKeyboardButton("👑 Owner", url=OWNER_LINK)]]
     text = (
         "<b>🎉 Access Granted!</b>\n\n"
@@ -176,20 +167,47 @@ async def send_token(obj, context, edit=False):
 
 # === ERROR HANDLER ===
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    # ... (function code same as before)
     logging.error(f"Update {update} caused error {context.error}")
 
-# === RUN THE BOT ===
+
+# ==============================================================
+# === NAYA CODE: WEB SERVER SETUP FOR RENDER FREE PLAN ===
+# ==============================================================
+
+# Flask app ko setup karte hain
+web_app = Flask(__name__)
+
+@web_app.route('/')
+def index():
+    # Yeh message Render ko batayega ki hum zinda hain
+    return "Bot is alive and running!"
+
+def run_web_server():
+    # Web server ko chalaata hai. Render apne aap port set kar dega.
+    # '0.0.0.0' zaroori hai taaki yeh public ho.
+    web_app.run(host='0.0.0.0', port=10000)
+
 def main():
+    """Bot aur Web Server, dono ko start karta hai."""
+    
     if not initialize_firebase():
         logging.critical("CRITICAL: Bot cannot start without Firebase. Check credentials.")
         return
-    
+
+    # 1. Web server ko ek alag background thread me chalu karte hain
+    web_thread = threading.Thread(target=run_web_server)
+    web_thread.daemon = True
+    web_thread.start()
+    logging.info("Web server started in a background thread.")
+
+    # 2. Telegram bot ko normally chalu karte hain
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(check_channels, pattern="^check$"))
     app.add_error_handler(error_handler)
     
-    logging.info("Starting bot with HARDCODED Firebase credentials...")
+    logging.info("Starting Telegram bot polling...")
     app.run_polling()
 
 if __name__ == "__main__":
