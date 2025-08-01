@@ -32,10 +32,11 @@ SITE_LINK = "https://skillneastauth.vercel.app/"
 FIREBASE_DATABASE_URL = "https://adminneast-default-rtdb.firebaseio.com"
 
 # Credentials ka template (bina private key ke)
+# ▼▼▼ YAHAN AAPKE NAYE CREDENTIALS DAAL DIYE GAYE HAIN ▼▼▼
 FIREBASE_CREDENTIALS_TEMPLATE = {
   "type": "service_account",
   "project_id": "adminneast",
-  "private_key_id": "5abfa705c2d4f161b0d72b0be87f708ca8bb0f80",
+  "private_key_id": "db5b89e71efd742e330f5a1118dfe1979924ef70",
   "client_email": "firebase-adminsdk-fbsvc@adminneast.iam.gserviceaccount.com",
   "client_id": "102397019138291957016",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -45,36 +46,34 @@ FIREBASE_CREDENTIALS_TEMPLATE = {
   "universe_domain": "googleapis.com"
 }
 
-# ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-# YAHAN APNI PRIVATE KEY DAALEIN (BILKUL JAISA COPY KIYA HAI, WAISA HI)
-# ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+# ▼▼▼ YAHAN AAPKI NAYI PRIVATE KEY DAAL DI GAYI HAI ▼▼▼
 PRIVATE_KEY_RAW = r"""-----BEGIN PRIVATE KEY-----
-MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC7h7lpfJIy0Svk
-Fo0/XJhakX8P/Phck+OZeBlXDsAHAAlDIWz47G9c2bdzV2ZrheQFw+mI/tiRW4E0
-vuIISN+fNmWxh2SLX9dusX1c7oYT8rHip4HgSq04/VoHK6TcLHkqXVHVTfCoGE2k
-dsTI4LTihFeq9JDKij2xlcUA0zEQzCPiEwE7mAQ5edF9YXxexZgezXMPuox5CUvA
-Xk9TKDn916mks/IQuNoPrJcjPNNRnie5Ql9RpWnMnHXaIjsCMk+dslsS3NQaPzRZ
-YR0WzEgskexW3zRbWDz/XiaCDM7jLnp9sIIE7GAwcEzAHePjl3yaNkSMPLjn85Gr
-CNaTi/pjAgMBAAECggEAHhru2BFogwHzct1v9YEO8FM1O8LXuD0Bp8yQ/NngV/9Y
-fU9raBbE1foZqkmYpqBK9+X4osaOy98NwgL21G+mfq/D6Zkbugg71Ihn4LhmC+PF
-TOapQfGbF3AMuOP3xmTZWsS6c2zcuo+UP1fVxY3VXBv02vwCFpHUz6KEitpcoR5t
-wnZP4+qiZszDCiQFwItQ6jchRA6FZiUOMN6Z7I3fVZcdjnDd18ZON2Hw91XaFnyL
-M4MNDCT3kXu6c8a3/4gJRPnZpKrb0RTgUwtfs+OAn5TjZtpBlMV5VZVMHX7ZZg6d
-08n2r8ORA4RJWamZUamT2vz2z/x7kltaVyQTJjLhuQKBgQD1dcNzbJurq54bEcdn
-3sDldy50ZJHpXcUOBgLExaeMO6+x69TTO5xrgtuXt0zXH49KeeFdyMRzMGR8GXXQ
-xMc4/ANLlAMlQpGb9l1glAEM+jt1SiVLuYhw0NSGfQxEg9My56NiHV6gVekCUoU0
-GRs3ZTI4nLRr5ypmkWvvbrAu9QKBgQDDlSm1ansJUVDHdI39UmsBBCGfhlljULzl
-kuuFOF5yKErIme9X2gwB/KsH6Ch/rdIv5ysScNzJACTmkQbW2mjOVw3FZB8K5Jsk
-OfL0B+LxWJmZJULwB0aogl8NCIG/Xthf7tIPAAzXpglTYjXM+7yLLEjvqarQklfo
-r2qsi5B89wKBgC564EnpFQlK9CN4GGRo3+oTyW4s5RxlrzzakoekTffWDY0JdUGS
-liodm2t9QEW0KjQWJEDYFasiTMTbJV4lBPybbBxRqM7TbjM0UbZKEHDeqYeqRKm0
-Nkv2n2fgIgSPWdzX1C5uFU8TNY5FBgg5gNfah8oEkn2kRnkprGCoeyBJAoGAM2wx
-hihT5xRBJ9/mQTd9OMwsRvQc5nbg439oeyNh+aPMXcfTXQbQZ2lWUoLguwkpnTyr
-X3LbKeHm0dRJtw2/xpiu3zo+yy9l9vVhgnXcXlZMNC7O1askEcQNV7Dn5Df8reRt
-yFHcDoryIsFMofOCFBl1p8W1Spdfk6cjZfBf8esCgYBTL9DE0DbEk0XwL5ycbfxv
-/n0i0NJiC9ZUb+N+pmVTE1Doope/UQqVccEUdqWKlf4yY7DgLgpDE0JLPgUWpm2g
-QNNV1FS3vDNoPNBlcOETkrs/+Y7lJ8yiT4TYd1siqfz5+k0v82k0J/7jPleupDx6
-8ujxOm9a7rEXQSTA3u8Yeg==
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDFCooUCLf/Zs8h
+prpHvyfvrpinEsovN2VEPAl8hT4O+psgO6YsoUatB0PYK9xlD/D9ncpBaAfNNPOx
+hMFCRZ6n+W+OqK/93rr/N2n+LU5R598XIi0ff7JPipkdZL8xw2WGChRSfk+Lp19d
+lDvHzbQDFdtBZKGOB1AUbbYI/OOKSigCACTa90ec6qWbPlHBjcp4HV1cZqIyy8mP
+lRku9JbsVNBCDOt2L4GCK1Whqs4JBrWtFnRzCJZ6AJOEYS9X4ke/BBkxwL2Y4RMV
+fvwcs+conrGUf47fcMuY1LjX2TLDxep5oBVprpBNGR6BAg76gcRuowAz8V2wirOg
+zJCMDyNNAgMBAAECggEAFqNO2N1lklzT+FhI95xBMNrc4/kXLJSPOGczadB/IEZv
+kyT3QxJmZdO7Wjcz05Kgy+qYhao3lz55rxADCiOohkD0ra24xpCT6GWL8m1vHZ7n
+tScyivdnW5cfX06nXsbFv8AhtJaZegCJRt2UfrCl+WLF9X3jx8cUTryKGP9A/y6x
+TW3Wctfu4R7k0ILv3xV6XyzL9fLBkhrEbGGOmkNsWRw3VK2nEDeHgvNImmjw4n23
+lLgp4D4WFhn7LmHODtXiER9ROI+odgOiL8apILEmoQSUgZ+FRYs41Sr0SplNfffK
+Y7K8ZEzpkdsaRg+BjtjNqciXdh4GGsy099XdJiFfIQKBgQDg8k+6jVQTnznufCq8
+sjet+gPryzFQ8HIzQfG9JWJg2PJEfI3I43rC18rwjQj948T+gfsoBlcuidq8JIsS
+W1IVf/s1JSYzgYiINbbBoTK6tSNqP+HV3rUBedxegZzHXYqr6IarQdr/iAWtwQ5H
+tpJR34SBA1dxMLfZdBbrZPO60QKBgQDgPgr12TW72f+Yup26BEqnqiyUrjPa04ik
+QUwD3ZMkdnl/aoxaSS3CM8JHIypYb2xh7vytvBD8Fb/Dz+78aQHK0brd96n90epc
+JQ+/+EpoB5f9j72RHoAbgLWP4mnFm6tP2yEPv9hl2mv87LQGbLSgukGGbLaLP9wb
+qAx/ZXqHvQKBgCMSZI/nfRZaGwQt49PrzXaYpofa9GN0Obn4LCKbc406Bfvbl5ec
+sAU08/UxaBd9rbcouOnyoyEkaTAwWmaQSmoDvDz6/8vEBG+IQGhMI8ase0sTjrhz
+srD6OPubJcCHuxk2ddi5udVhddEzanCP7JxLRzN+O+HwAJos2W32HXIhAoGBALa1
+Fo0V+9ghWUaB1v23fXR7DXPfNFT5wf3DTkJgCQHOnlQY5l6x/Vyce5Emr9v6fV6W
+ML8F2vjqZ6MOCvUSQemVVSKCJrmujbuiXuDVVxrIBSkOMzDInyzJhCXGHtRpb/3S
+129TqufiPdaIrm4FqG7FE5qJfXqb/6VxGS2760gpAoGBANN8NdcaKCv1Nas7s11H
+QDGquIA+8EKIH8lBLaS7cOBdX0A/+z23i24MxT2ikbO6Al/rWq3AuDaNBr3HyxJ+
+dUP3nxcQJjb7b5YDIz0iM7wsPhKCgpF8jANG+EDn8iXTh53cDI5IzQK1SaPOEVuX
+jI7AQ4/KoOpNVedx4D1E+CBD
 -----END PRIVATE KEY-----"""
 # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
@@ -84,7 +83,7 @@ logging.basicConfig(
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-# === FIREBASE INITIALIZATION (Updated to use Raw String) ===
+# === FIREBASE INITIALIZATION ===
 def initialize_firebase():
     try:
         logging.info("Initializing Firebase using Raw String method...")
