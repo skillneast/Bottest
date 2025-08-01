@@ -1,6 +1,9 @@
-import time
+import os
 import uuid
+import time
+import json
 import logging
+import base64 # <-- Base64 decoding ke liye import
 import firebase_admin
 from firebase_admin import credentials, db
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -10,14 +13,14 @@ from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes,
 )
-# === LIBRARIES FOR WEB SERVER WORKAROUND ===
 import threading
 from flask import Flask
 
 # =========================================================================
-# === CONFIG (SECRETS ARE HARDCODED - 🚨 EXTREMELY UNSAFE! 🚨) ===
+# === CONFIG (SECRETS ARE NOW PARTIALLY SECURED) ===
 # =========================================================================
-BOT_TOKEN = "8326586625:AAGA9NX8XB7ZnXqvM2-ANOO9TYfLsZeAgvQ" # <-- Aapka Bot Token
+# Aapka naya bot token
+BOT_TOKEN = "8326586625:AAGgz-XVjX4fRfpSR5iNrDhcZh8POvAQIm8"
 
 # Public config
 CHANNELS = [
@@ -28,13 +31,13 @@ OWNER_LINK = "https://t.me/neasthub"
 SITE_LINK = "https://skillneastauth.vercel.app/"
 
 # --- Firebase Configuration ---
+# Private key ko chhod kar baaki sab hardcoded hai.
 FIREBASE_DATABASE_URL = "https://adminneast-default-rtdb.firebaseio.com"
-FIREBASE_CREDENTIALS_DICT = {
-  # ... Aapke saare Firebase credentials yahan ...
+FIREBASE_CREDENTIALS_TEMPLATE = {
   "type": "service_account",
   "project_id": "adminneast",
   "private_key_id": "5abfa705c2d4f161b0d72b0be87f708ca8bb0f80",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC7h7lpfJIy0Svk\nFo0/XJhakX8P/Phck+OZeBlXDsAHAAlDIWz47G9c2bdzV2ZrheQFw+mI/tiRW4E0\nvuIISN+fNmWxh2SLX9dusX1c7oYT8rHip4HgSq04/VoHK6TcLHkqXVHVTfCoGE2k\ndsTI4LTihFeq9JDKij2xlcUA0zEQzCPiEwE7mAQ5edF9YXxexZgezXMPuox5CUvA\nXk9TKDn916mks/IQuNoPrJcjPNNRnie5Ql9RpWnMnHXaIjsCMk+dslsS3NQaPzRZ\nYR0WzEgskexW3zRbWDz/XiaCDM7jLnp9sIIE7GAwcEzAHePjl3yaNkSMPLjn85Gr\nCNaTi/pjAgMBAAECggEAHhru2BFogwHzct1v9YEO8FM1O8LXuD0Bp8yQ/NngV/9Y\nfU9raBbE1foZqkmYpqBK9+X4osaOy98NwgL21G+mfq/D6Zkbugg71Ihn4LhmC+PF\nTOapQfGbF3AMuOP3xmTZWsS6c2zcuo+UP1fVxY3VXBv02vwCFpHUz6KEitpcoR5t\nwnZP4+qiZszDCiQFwItQ6jchRA6FZiUOMN6Z7I3fVZcdjnDd18ZON2Hw91XaFnyL\nM4MNDCT3kXu6c8a3/4gJRPnZpKrb0RTgUwtfs+OAn5TjZtpBlMV5VZVMHX7ZZg6d\n08n2r8ORA4RJWamZUamT2vz2z/x7kltaVyQTJjLhuQKBgQD1dcNzbJurq54bEcdn\n3sDldy50ZJHpXcUOBgLExaeMO6+x69TTO5xrgtuXt0zXH49KeeFdyMRzMGR8GXXQ\nxMc4/ANLlAMlQpGb9l1glAEM+jt1SiVLuYhw0NSGfQxEg9My56NiHV6gVekCUoU0\nGRs3ZTI4nLRr5ypmkWvvbrAu9QKBgQDDlSm1ansJUVDHdI39UmsBBCGfhlljULzl\nkuuFOF5yKErIme9X2gwB/KsH6Ch/rdIv5ysScNzJACTmkQbW2mjOVw3FZB8K5Jsk\nOfL0B+LxWJmZJULwB0aogl8NCIG/Xthf7tIPAAzXpglTYjXM+7yLLEjvqarQklfo\nr2qsi5B89wKBgC564EnpFQlK9CN4GGRo3+oTyW4s5RxlrzzakoekTffWDY0JdUGS\nliodm2t9QEW0KjQWJEDYFasiTMTbJV4lBPybbBxRqM7TbjM0UbZKEHDeqYeqRKm0\nNkv2n2fgIgSPWdzX1C5uFU8TNY5FBgg5gNfah8oEkn2kRnkprGCoeyBJAoGAM2wx\nhihT5xRBJ9/mQTd9OMwsRvQc5nbg439oeyNh+aPMXcfTXQbQZ2lWUoLguwkpnTyr\nX3LbKeHm0dRJtw2/xpiu3zo+yy9l9vVhgnXcXlZMNC7O1askEcQNV7Dn5Df8reRt\nyFHcDoryIsFMofOCFBl1p8W1Spdfk6cjZfBf8esCgYBTL9DE0DbEk0XwL5ycbfxv\n/n0i0NJiC9ZUb+N+pmVTE1Doope/UQqVccEUdqWKlf4yY7DgLgpDE0JLPgUWpm2g\nQNNV1FS3vDNoPNBlcOETkrs/+Y7lJ8yiT4TYd1siqfz5+k0v82k0J/7jPleupDx6\n8ujxOm9a7rEXQSTA3u8Yeg==\n-----END PRIVATE KEY-----\n",
+  # Private key yahan se hata di gayi hai. Yeh ab environment se aayegi.
   "client_email": "firebase-adminsdk-fbsvc@adminneast.iam.gserviceaccount.com",
   "client_id": "102397019138291957016",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -44,36 +47,47 @@ FIREBASE_CREDENTIALS_DICT = {
   "universe_domain": "googleapis.com"
 }
 
-# ==============================================================
-# === BAAKI KA SAARA BOT KA CODE (is-me koi badlaav nahi) ===
-# ==============================================================
-
-# ... (Firebase Initialization, Token Generator, Start Handler, etc. saara code yahan aayega) ...
 # === LOGGING SETUP ===
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-# === FIREBASE INITIALIZATION ===
+# === FIREBASE INITIALIZATION (Updated to use Base64 key) ===
 def initialize_firebase():
-    # ... (function code same as before)
     try:
-        cred = credentials.Certificate(FIREBASE_CREDENTIALS_DICT)
+        logging.info("Initializing Firebase...")
+        # 1. Base64-encoded key ko environment se get karte hain
+        encoded_key = os.getenv("FIREBASE_PRIVATE_KEY_BASE64")
+        if not encoded_key:
+            logging.error("CRITICAL: FIREBASE_PRIVATE_KEY_BASE64 environment variable not found!")
+            return False
+        
+        # 2. Key ko decode karke wapas original format me laate hain
+        decoded_key = base64.b64decode(encoded_key).decode('utf-8')
+
+        # 3. Decoded key ko credentials template me daalte hain
+        creds_dict = FIREBASE_CREDENTIALS_TEMPLATE.copy()
+        creds_dict['private_key'] = decoded_key
+
+        # 4. Final credentials se Firebase initialize karte hain
+        cred = credentials.Certificate(creds_dict)
         firebase_admin.initialize_app(cred, {'databaseURL': FIREBASE_DATABASE_URL})
-        logging.info("Firebase has been initialized successfully!")
+        
+        logging.info("Firebase has been initialized successfully using Base64 key!")
         return True
     except Exception as e:
         logging.error(f"Failed to initialize Firebase: {e}")
         return False
 
-# === TOKEN GENERATOR ===
+# === BAAKI KA SAARA CODE BILKUL SAME HAI ===
+
+# === TOKEN GENERATOR (Interacts with Firebase) ===
 async def generate_and_save_token(user_id: int) -> str | None:
-    # ... (function code same as before)
     try:
         token = str(uuid.uuid4())
         current_timestamp = int(time.time())
-        expiry_timestamp = current_timestamp + (15 * 60)
+        expiry_timestamp = current_timestamp + (15 * 60) # 15 minutes expiry
         token_data = {'user_id': user_id, 'created_at': current_timestamp, 'expiry_timestamp': expiry_timestamp, 'used': False}
         ref = db.reference(f'tokens/{token}')
         ref.set(token_data)
@@ -83,9 +97,8 @@ async def generate_and_save_token(user_id: int) -> str | None:
         logging.error(f"Failed to generate/save token: {e}")
         return None
 
-# === START HANDLER ===
+# === START HANDLER (Updated description) ===
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ... (function code same as before)
     user_id = update.effective_user.id
     logging.info(f"User {user_id} started the bot.")
     joined_all, _ = await check_all_channels(context, user_id)
@@ -107,7 +120,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # === VERIFY BUTTON HANDLER ===
 async def check_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ... (function code same as before)
     query = update.callback_query
     user_id = query.from_user.id
     await query.answer()
@@ -118,19 +130,15 @@ async def check_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         not_joined_list = "\n".join([f"🔸 {ch[1:]}" for ch, _ in not_joined])
         keyboard = [[InlineKeyboardButton("🔁 Retry", callback_data="check")], [InlineKeyboardButton("👑 Owner Profile", url=OWNER_LINK)]]
-        await query.edit_message_text(f"❌ You still haven’t joined:\n\n<code>{not_joined_list}</code>\n\n"
-                                    "📛 Access will be revoked if you leave any channel.",
-                                    parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text(f"❌ You still haven’t joined:\n\n<code>{not_joined_list}</code>\n\n" "📛 Access will be revoked if you leave any channel.", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard))
 
 # === CHECK MEMBERSHIP ===
 async def check_all_channels(context, user_id):
-    # ... (function code same as before)
     not_joined = []
     for username, url in CHANNELS:
         try:
             member = await context.bot.get_chat_member(username, user_id)
-            if member.status not in ['member', 'administrator', 'creator']:
-                not_joined.append((username, url))
+            if member.status not in ['member', 'administrator', 'creator']: not_joined.append((username, url))
         except Exception as e:
             logging.warning(f"Error checking {username} for user {user_id}: {e}")
             not_joined.append((username, url))
@@ -138,75 +146,43 @@ async def check_all_channels(context, user_id):
 
 # === SEND TOKEN ===
 async def send_token(obj, context, edit=False):
-    # ... (function code same as before)
     user_id = obj.effective_user.id
     token = await generate_and_save_token(user_id)
     if not token:
         error_text = "❌ Sorry, an error occurred. Please try again later."
-        if edit:
-            await obj.edit_message_text(error_text)
-        else:
-            await obj.message.reply_text(error_text)
+        if edit: await obj.edit_message_text(error_text)
+        else: await obj.message.reply_text(error_text)
         return
     keyboard = [[InlineKeyboardButton("🔐 Access Website", url=SITE_LINK)], [InlineKeyboardButton("👑 Owner", url=OWNER_LINK)]]
-    text = (
-        "<b>🎉 Access Granted!</b>\n\n"
-        "Here is your temporary access token:\n\n"
-        f"<code>{token}</code>\n\n"
-        "✅ Paste this on the website to continue!\n"
-        "⚠️ <b>Note: This token is valid for 15 minutes only and can be used once.</b>"
-    )
+    text = ("<b>🎉 Access Granted!</b>\n\n" "Here is your temporary access token:\n\n" f"<code>{token}</code>\n\n" "✅ Paste this on the website to continue!\n" "⚠️ <b>Note: This token is valid for 15 minutes only and can be used once.</b>")
     try:
-        if edit:
-            await obj.edit_message_text(text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard))
-        else:
-            await obj.message.reply_text(text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard))
+        if edit: await obj.edit_message_text(text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard))
+        else: await obj.message.reply_text(text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard))
         logging.info(f"Firebase token sent to user {user_id}")
-    except Exception as e:
-        logging.error(f"Failed to send token: {e}")
+    except Exception as e: logging.error(f"Failed to send token: {e}")
 
 # === ERROR HANDLER ===
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
-    # ... (function code same as before)
     logging.error(f"Update {update} caused error {context.error}")
 
-
-# ==============================================================
-# === NAYA CODE: WEB SERVER SETUP FOR RENDER FREE PLAN ===
-# ==============================================================
-
-# Flask app ko setup karte hain
+# === WEB SERVER SETUP FOR RENDER FREE PLAN ===
 web_app = Flask(__name__)
-
 @web_app.route('/')
-def index():
-    # Yeh message Render ko batayega ki hum zinda hain
-    return "Bot is alive and running!"
-
-def run_web_server():
-    # Web server ko chalaata hai. Render apne aap port set kar dega.
-    # '0.0.0.0' zaroori hai taaki yeh public ho.
-    web_app.run(host='0.0.0.0', port=10000)
+def index(): return "Bot is alive and running!"
+def run_web_server(): web_app.run(host='0.0.0.0', port=10000)
 
 def main():
-    """Bot aur Web Server, dono ko start karta hai."""
-    
     if not initialize_firebase():
-        logging.critical("CRITICAL: Bot cannot start without Firebase. Check credentials.")
+        logging.critical("CRITICAL: Bot cannot start without Firebase.")
         return
-
-    # 1. Web server ko ek alag background thread me chalu karte hain
     web_thread = threading.Thread(target=run_web_server)
     web_thread.daemon = True
     web_thread.start()
     logging.info("Web server started in a background thread.")
-
-    # 2. Telegram bot ko normally chalu karte hain
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(check_channels, pattern="^check$"))
     app.add_error_handler(error_handler)
-    
     logging.info("Starting Telegram bot polling...")
     app.run_polling()
 
