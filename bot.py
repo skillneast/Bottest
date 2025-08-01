@@ -1,5 +1,6 @@
-import hmac, hashlib, random, string, logging
+import hmac, hashlib, random, string, logging, os, threading
 from datetime import datetime
+from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -8,8 +9,22 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# === CONFIG (SECRETS ARE HARDCODED - NOT SAFE!) ===
-# DANGER: Yeh secrets public ho sakte hain agar code GitHub par hai.
+# === DUMMY WEB SERVER (to keep Render's Web Service alive) ===
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    """A simple route to respond to Render's health checks."""
+    return "Bot is alive and running!"
+
+def run_flask():
+    """Runs the Flask web server in a separate thread."""
+    # Render provides the PORT environment variable.
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
+
+# === BOT CONFIG (SECRETS ARE HARDCODED - NOT SAFE!) ===
+# DANGER: These secrets can be exposed if the code is on a public repository.
 BOT_TOKEN = "8326586625:AAGA9NX8XB7ZnXqvM2-ANOO9TYfLsZeAgvQ"
 SECRET_KEY = "STUDYERA2025"
 
@@ -21,14 +36,16 @@ CHANNELS = [
 OWNER_LINK = "https://t.me/neasthub"
 SITE_LINK = "https://skillneastauth.vercel.app/"
 
-# === LOGGING ===
+# === LOGGING SETUP ===
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("werkzeug").setLevel(logging.WARNING) # Quiets down Flask's default logs
 
 # === TOKEN GENERATOR ===
 def generate_token():
+    """Generates a secure, date-based token."""
     now = datetime.now()
     base = now.strftime('%a').upper()[:3] + "-" + now.strftime('%d') + now.strftime('%b').upper()
     digest = hmac.new(SECRET_KEY.encode(), base.encode(), hashlib.sha256).hexdigest().upper()
@@ -38,6 +55,7 @@ def generate_token():
 
 # === START HANDLER ===
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles the /start command."""
     user_id = update.effective_user.id
     logging.info(f"User {user_id} started the bot.")
     
@@ -51,7 +69,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("✅ I Joined", callback_data="check"),
             InlineKeyboardButton("👑 Owner", url=OWNER_LINK)
         ])
-
         await update.message.reply_text(
             "<b>🚀 Welcome to StudyEra!</b>\n\n"
             "📚 Free Educational Resources — Notes, PYQs, Live Batches, Test Series & more!\n\n"
@@ -63,11 +80,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # === VERIFY BUTTON HANDLER ===
 async def check_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles the 'I Joined' button click."""
     query = update.callback_query
     user_id = query.from_user.id
     await query.answer()
-    logging.info(f"User {user_id} clicked the check button.")
 
+    logging.info(f"User {user_id} clicked the check button.")
     joined_all, not_joined = await check_all_channels(context, user_id)
 
     if joined_all:
@@ -79,7 +97,6 @@ async def check_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("🔁 Retry", callback_data="check")],
             [InlineKeyboardButton("👑 Owner Profile", url=OWNER_LINK)]
         ]
-
         await query.edit_message_text(
             f"❌ You still haven’t joined:\n\n<code>{not_joined_list}</code>\n\n"
             "📛 Access will be revoked if you leave any channel.",
@@ -89,6 +106,7 @@ async def check_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # === CHECK MEMBERSHIP ===
 async def check_all_channels(context, user_id):
+    """Checks if the user is a member of all required channels."""
     not_joined = []
     for username, url in CHANNELS:
         try:
@@ -102,6 +120,7 @@ async def check_all_channels(context, user_id):
 
 # === SEND TOKEN ===
 async def send_token(obj, context, edit=False):
+    """Generates and sends the access token."""
     token = generate_token()
     keyboard = [
         [InlineKeyboardButton("🔐 Access Website", url=SITE_LINK)],
@@ -114,30 +133,45 @@ async def send_token(obj, context, edit=False):
         "✅ Paste this on the website to continue!\n"
         "⚠️ Note: If you leave any channel later, your access will be revoked automatically."
     )
-
+    
+    # BUG FIX: Get user_id correctly for both message and callback_query
+    user_id = obj.from_user.id if hasattr(obj, 'from_user') else obj.effective_user.id
+    
     try:
         if edit:
             await obj.edit_message_text(text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard))
-        else:
+        else: # This branch is for when /start is used by an already-joined user
             await obj.message.reply_text(text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard))
-        logging.info(f"Token sent to user {obj.effective_user.id}")
+        logging.info(f"Token sent to user {user_id}")
     except Exception as e:
-        logging.error(f"Failed to send token: {e}")
+        logging.error(f"Failed to send token to {user_id}: {e}")
 
 # === ERROR HANDLER ===
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    """Log Errors, but ignore 'Message is not modified'."""
+    if "Message is not modified" in str(context.error):
+        return
     logging.error(f"Update {update} caused error {context.error}")
 
-# === RUN THE BOT ===
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+# === BOT STARTER FUNCTION ===
+def run_bot():
+    """Initializes and runs the Telegram bot."""
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
     
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(check_channels, pattern="^check$"))
-    app.add_error_handler(error_handler)
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(check_channels, pattern="^check$"))
+    application.add_error_handler(error_handler)
     
-    logging.info("Starting bot...")
-    app.run_polling()
+    logging.info("Starting bot polling...")
+    application.run_polling()
 
+# === MAIN ENTRY POINT ===
 if __name__ == "__main__":
-    main()
+    # Run the Flask web server in a background thread
+    logging.info("Starting Flask server in a background thread...")
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+    
+    # Run the bot in the main thread
+    run_bot()
